@@ -10,6 +10,7 @@ build:
 
 test:
 	docker run --rm -v "${PWD}/test":/tmp $(IMAGE) sample_addresses_geocoded.csv
+	cp test/sample_addresses_geocoded_report.html docs/index.html
 
 shell:
 	docker run --rm -it --entrypoint=/bin/bash -v "${PWD}/test":/tmp $(IMAGE)
