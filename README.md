@@ -15,7 +15,7 @@ docker run --rm -v $PWD:/tmp degauss/jfs_report_from_geocoded_file:0.1 sample_ad
 
 will produce `sample_addresses_geocoded_report.html`.
 
-[example report](http://htmlpreview.github.io/?https://github.com/degauss-org/jfs_report_from_geocoded_file/blob/master/test/sample_addresses_geocoded_report.html)
+[example report](http://degauss.org/jfs_report_from_geocoded_file)
 
 ## geomarker data
 
