@@ -39,7 +39,7 @@ geocode_summary <- d %>%
 ```{r}
 dep_summary <- d %>% 
   filter(!is.na(lat)) %>% 
-  group_by(screen) %>% 
+  group_by(SCREENING_DECISION) %>% 
   summarize(mean_dep = round(mean(dep_index, na.rm = T),2), 
             sd_dep = round(sd(dep_index, na.rm = T), 1))
 
@@ -49,7 +49,7 @@ d %>%
   tally() %>% 
   mutate(pct = round(n/sum(n)*100,1),
          `N (%)` = glue::glue('{n} ({pct}%)')) %>% 
-  left_join(dep_summary, by = 'screen') %>% 
+  left_join(dep_summary, by = 'SCREENING_DECISION') %>% 
   mutate(mean_sd = glue::glue('{mean_dep} ({sd_dep})')) %>% 
   select(Decision = SCREENING_DECISION, `N (%)`, `Deprivation Index Mean (sd) ` = mean_sd)
 ```
