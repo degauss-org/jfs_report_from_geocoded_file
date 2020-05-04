@@ -45,13 +45,13 @@ dep_summary <- d %>%
 
 d %>% 
   filter(!is.na(lat)) %>% 
-  group_by(screen) %>% 
+  group_by(SCREENING_DECISION) %>% 
   tally() %>% 
   mutate(pct = round(n/sum(n)*100,1),
          `N (%)` = glue::glue('{n} ({pct}%)')) %>% 
   left_join(dep_summary, by = 'screen') %>% 
   mutate(mean_sd = glue::glue('{mean_dep} ({sd_dep})')) %>% 
-  select(Decision = screen, `N (%)`, `Deprivation Index Mean (sd) ` = mean_sd)
+  select(Decision = SCREENING_DECISION, `N (%)`, `Deprivation Index Mean (sd) ` = mean_sd)
 ```
 
 # Neighborhood Summary
@@ -60,7 +60,7 @@ d %>%
 tract_to_neighborhood <- readRDS('/app/tract_to_neighborhood.rds')
 
 d <- d  %>%
-  select(intake_id:fips_tract_id) %>% 
+  select(INTAKE_ID:fips_tract_id) %>% 
   filter(!is.na(lat)) %>% 
   left_join(tract_to_neighborhood, by='fips_tract_id')
 
@@ -69,11 +69,11 @@ intakes_neighborhood <- d %>%
   summarize(n_intakes = n())
 
 screen_neighborhood <- d %>% 
-  group_by(neighborhood, screen) %>% 
+  group_by(neighborhood, SCREENING_DECISION) %>% 
   tally() %>% 
-  filter(screen == 'screened in') %>% 
+  filter(SCREENING_DECISION == 'SCREENED IN') %>% 
   mutate(n_screen_in = n) %>% 
-  select(-n, -screen) %>% 
+  select(-n, -SCREENING_DECISION) %>% 
   left_join(intakes_neighborhood, by = 'neighborhood')
 
 neighborhood_shp <- readRDS('/app/ham_neighborhoods_dep_index_shp.rds')
