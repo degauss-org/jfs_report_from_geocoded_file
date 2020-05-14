@@ -21,4 +21,7 @@ d <- read_csv(args$file_name,
 
 rmarkdown::render(input = '/app/generate_report.Rmd',
                   params = list(d = d),
-                  output_file = paste0('/tmp/', gsub('.csv', '', args$file_name, fixed=TRUE), '_report.html'))
+                  envir = new.env(),
+                  output_file = fs::path("/tmp", paste0(gsub('.csv', '', args$file_name, fixed=TRUE), '_report.html')))
+
+
