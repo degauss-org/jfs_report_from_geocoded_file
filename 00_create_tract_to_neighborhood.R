@@ -231,6 +231,7 @@ tract_to_neighborhood <- tribble(
   0,"Lockland","39061027400"
 )
 
+
 dep_index <- 'https://github.com/cole-brokamp/dep_index/raw/master/ACS_deprivation_index_by_census_tracts.rds' %>%
   url() %>%
   gzcon() %>%
@@ -238,6 +239,15 @@ dep_index <- 'https://github.com/cole-brokamp/dep_index/raw/master/ACS_deprivati
   as_tibble()
 
 ham_co_tracts <- tigris::tracts(cb=TRUE,state="39",county="061",year=2018)
+
+city_outline <- ham_co_tracts %>%
+  left_join(tract_to_neighborhood, by = c('GEOID' = 'fips_tract_id')) %>%
+  filter(city == 1) %>%
+  st_union() %>%
+  st_cast(to = 'MULTILINESTRING') %>%
+  st_transform(3735)
+mapview::mapview(city_outline)
+aws.s3::s3saveRDS(city_outline, "s3://geomarker/geometries/cincinnati_city_outline.rds")
 
 ham_co_pop <- tidycensus::get_acs(geography = 'tract',
                     variables = c(paste0('B01001_00', 1:6), paste0('B01001_0', 27:30)),
@@ -247,13 +257,21 @@ ham_co_pop <- tidycensus::get_acs(geography = 'tract',
   group_by(GEOID) %>%
   summarize(pop_under_18 = sum(estimate))
 
+ham_co_hh <- tidycensus::get_acs(geography = 'tract',
+                                  variables = 'B11005_002',
+                                  year = 2018,
+                                  state = 'Ohio',
+                                  county = 'Hamilton') %>%
+  select(GEOID, num_hh = estimate)
+
 # v18 <- tidycensus::load_variables(year = 2018, dataset = 'acs5')
 
 ham_neighborhoods <- ham_co_tracts %>%
   left_join(tract_to_neighborhood, by=c('GEOID'='fips_tract_id')) %>%
   left_join(dep_index, by = c('GEOID' = 'census_tract_fips')) %>%
   left_join(ham_co_pop, by = 'GEOID') %>%
-  dplyr::select(neighborhood,city,fraction_assisted_income:dep_index, pop_under_18) %>%
+  left_join(ham_co_hh, by = 'GEOID') %>%
+  dplyr::select(neighborhood,city,fraction_assisted_income:dep_index, pop_under_18, num_hh) %>%
   group_by(neighborhood) %>%
   summarise(city=max(city),
             fraction_assisted_income = mean(fraction_assisted_income, na.rm = T),
@@ -263,7 +281,8 @@ ham_neighborhoods <- ham_co_tracts %>%
             fraction_poverty = mean(fraction_poverty, na.rm = T),
             fraction_vacant_housing = mean(fraction_vacant_housing, na.rm = T),
             dep_index = mean(dep_index, na.rm = T),
-            pop_under_18 = sum(pop_under_18, na.rm = T))
+            pop_under_18 = sum(pop_under_18, na.rm = T),
+            num_hh = sum(num_hh, na.rm = T), )
 saveRDS(ham_neighborhoods, 'ham_neighborhoods_dep_index_shp.rds')
 
 tract_to_neighborhood <- select(tract_to_neighborhood, -city)
