@@ -1,12 +1,12 @@
 ---
-title: "JFS Monthly Report"
-author: "Erika Rasnick"
+title: "JFS Neighborhood-Level Report"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   html_document:
     df_print: kable
 params: 
-  d: data
+  d_intake: d_intake
+  d_child: d_child
 ---
 
 ```{r setup, include=FALSE}
@@ -20,36 +20,65 @@ tmap_mode('view')
 ```
 
 ```{r}
-d <- params$d
+d_intake <- params$d_intake
+d_child <- params$d_child
 ```
 
 # Overall Summary
 
 ```{r}
-geocode_summary <- d %>% 
+intake_geocode_summary <- d_intake %>% 
   group_by(is.na(lat)) %>% 
   tally() %>% 
   mutate(pct = round(n/sum(n)*100,1))
+
+child_geocode_summary <- d_child %>% 
+  group_by(is.na(lat)) %>% 
+  tally() %>% 
+  mutate(pct = round(n/sum(n)*100,1))
+
+rbind(intake_geocode_summary, child_geocode_summary) %>% 
+  filter(`is.na(lat)` == FALSE) %>% 
+  mutate(File = c('Intake', 'ACV'), 
+         `Number of Rows` = c(nrow(d_intake), nrow(d_child)),
+         `Number Geocoded` = paste0(n, " (", pct, "%)")) %>% 
+  select(File, `Number of Rows`, `Number Geocoded`)
 ```
 
-**Number of intakes:** `r nrow(d)`
 
-**Number successfully geocoded:** `r geocode_summary$n[1]` (`r geocode_summary$pct[1]`%)
 
-```{r}
-dep_summary <- d %>% 
+```{r, eval=F}
+intake_dep_summary <- d_intake %>% 
   filter(!is.na(lat)) %>% 
   group_by(SCREENING_DECISION) %>% 
   summarize(mean_dep = round(mean(dep_index, na.rm = T),2), 
             sd_dep = round(sd(dep_index, na.rm = T), 1))
 
-d %>% 
+d_intake %>% 
   filter(!is.na(lat)) %>% 
   group_by(SCREENING_DECISION) %>% 
   tally() %>% 
   mutate(pct = round(n/sum(n)*100,1),
          `N (%)` = glue::glue('{n} ({pct}%)')) %>% 
-  left_join(dep_summary, by = 'SCREENING_DECISION') %>% 
+  left_join(intake_dep_summary, by = 'SCREENING_DECISION') %>% 
+  mutate(mean_sd = glue::glue('{mean_dep} ({sd_dep})')) %>% 
+  select(Decision = SCREENING_DECISION, `N (%)`, `Deprivation Index Mean (sd) ` = mean_sd)
+```
+
+```{r, eval = F}
+child_dep_summary <- d_child %>% 
+  filter(!is.na(lat)) %>% 
+  group_by(SCREENING_DECISION) %>% 
+  summarize(mean_dep = round(mean(dep_index, na.rm = T),2), 
+            sd_dep = round(sd(dep_index, na.rm = T), 1))
+
+d_child %>% 
+  filter(!is.na(lat)) %>% 
+  group_by(SCREENING_DECISION) %>% 
+  tally() %>% 
+  mutate(pct = round(n/sum(n)*100,1),
+         `N (%)` = glue::glue('{n} ({pct}%)')) %>% 
+  left_join(child_dep_summary, by = 'SCREENING_DECISION') %>% 
   mutate(mean_sd = glue::glue('{mean_dep} ({sd_dep})')) %>% 
   select(Decision = SCREENING_DECISION, `N (%)`, `Deprivation Index Mean (sd) ` = mean_sd)
 ```
@@ -59,93 +88,118 @@ d %>%
 ```{r}
 tract_to_neighborhood <- readRDS('/app/tract_to_neighborhood.rds')
 
-d <- d  %>%
+d_intake <- d_intake  %>%
   select(INTAKE_ID:fips_tract_id) %>% 
+  mutate(fips_tract_id = as.character(fips_tract_id)) %>% 
   filter(!is.na(lat)) %>% 
   left_join(tract_to_neighborhood, by='fips_tract_id')
 
-intakes_neighborhood <- d %>% 
+intakes_neighborhood <- d_intake %>% 
   group_by(neighborhood) %>% 
   summarize(n_intakes = n())
 
-screen_neighborhood <- d %>% 
+intake_screen_neighborhood <- d_intake %>% 
   group_by(neighborhood, SCREENING_DECISION) %>% 
   tally() %>% 
   filter(SCREENING_DECISION == 'SCREENED IN') %>% 
-  mutate(n_screen_in = n) %>% 
+  mutate(n_intakes_screened_in = n) %>% 
   select(-n, -SCREENING_DECISION) %>% 
   left_join(intakes_neighborhood, by = 'neighborhood')
+
+d_child <- d_child  %>%
+  select(ACV_ID:fips_tract_id) %>% 
+  mutate(fips_tract_id = as.character(fips_tract_id)) %>% 
+  filter(!is.na(lat)) %>% 
+  left_join(tract_to_neighborhood, by='fips_tract_id')
+
+child_neighborhood <- d_child %>% 
+  group_by(neighborhood) %>% 
+  summarize(n_children = n())
+
+child_screen_neighborhood <- d_child %>% 
+  group_by(neighborhood, SCREENING_DECISION) %>% 
+  tally() %>% 
+  filter(SCREENING_DECISION == 'SCREENED IN') %>% 
+  mutate(n_children_screened_in = n) %>% 
+  select(-n, -SCREENING_DECISION) %>% 
+  left_join(child_neighborhood, by = 'neighborhood')
+
+d_neighborhood <- intake_screen_neighborhood %>% 
+  left_join(child_screen_neighborhood, by = 'neighborhood')
 
 neighborhood_shp <- readRDS('/app/ham_neighborhoods_dep_index_shp.rds')
 
 d_neighborhood <- neighborhood_shp %>% 
-  left_join(screen_neighborhood, by = 'neighborhood') %>% 
-  mutate(n_intakes_per_1000 = n_intakes/pop_under_18*1000,
-         n_screened_in_per_1000 = n_screen_in/pop_under_18*1000,
-         fractional_screen_in = n_screened_in_per_1000/n_intakes_per_1000) %>% 
-  select(neighborhood, n_intakes, n_intakes_per_1000, n_screen_in, n_screened_in_per_1000,
-         fractional_screen_in, city, dep_index, pop_under_18)
+  left_join(d_neighborhood, by = 'neighborhood') %>% 
+  mutate_at(vars(n_intakes, n_intakes_screened_in, 
+                 n_children, n_children_screened_in), 
+            ~ifelse(.x < 10, NA, .x)) %>% 
+  mutate(n_intakes_per_1000hh = n_intakes/num_hh*1000,
+         n_intakes_screened_in_per_1000hh = n_intakes_screened_in/num_hh*1000,
+         intake_fractional_screen_in = n_intakes_screened_in_per_1000hh/n_intakes_per_1000hh,
+         n_children_per_1000 = n_children/pop_under_18*1000,
+         n_children_screened_in_per_1000 = n_children_screened_in/pop_under_18*1000,
+         child_fractional_screen_in = n_children_screened_in_per_1000/n_children_per_1000)
   
-# d_neighborhood %>%  
-#   st_drop_geometry() %>% 
-#   select(neighborhood, n_screened_in_per_1000, dep_index)
+d_neighborhood %>%
+  st_drop_geometry() %>% 
+  select(Neighborhood = neighborhood, 
+        `Number of Intakes` = n_intakes, 
+        `Intakes Screened In` = n_intakes_screened_in,
+        `Number of Households` = num_hh, 
+        `Intake Rate` = n_intakes_per_1000hh,
+        `Intake Screen-In Rate` = n_intakes_screened_in_per_1000hh,
+        `Screen-In/Intake` = intake_fractional_screen_in,
+        `Number of ACV` = n_children, 
+        `Children Screened In` = n_children_screened_in, 
+        `Population under 18` = pop_under_18,
+        `ACV Rate` = n_children_per_1000, 
+        `ACV Screen-In Rate` = n_children_screened_in_per_1000,
+        `Screen-In/ACV` = child_fractional_screen_in) %>% 
+  DT::datatable()
 ```
 
-
-```{r}
-d_neighborhood %>% 
-  mutate(neighborhood = fct_reorder(neighborhood, n_intakes_per_1000, .desc = FALSE)) %>% 
-  top_n(n = 10, wt = n_intakes_per_1000) %>% 
-  ggplot(aes(x = neighborhood, y = n_intakes_per_1000, fill = n_intakes_per_1000)) +
-    geom_bar(stat='identity') +
-    labs(title = 'Intake Rates by Neighborhood',
-          y = 'Number of Calls Per 1000 Population under 18') +
-    theme(axis.title.y = element_blank()) +
-  scale_fill_viridis_c() +
-  theme(legend.position = "none") +
-  coord_flip()
-```
-
-```{r}
-d_neighborhood %>% 
-  mutate(neighborhood = fct_reorder(neighborhood, n_screened_in_per_1000, .desc = FALSE)) %>% 
-  top_n(n = 10, wt = n_screened_in_per_1000) %>% 
-  ggplot(aes(x = neighborhood, y = n_screened_in_per_1000, fill = n_screened_in_per_1000)) +
-    geom_bar(stat='identity') +
-    labs(title = 'Screen-In Rates by Neighborhood',
-          y = 'Number of Calls Screened In Per 1000 Population under 18') +
-    theme(axis.title.y = element_blank()) +
-  scale_fill_viridis_c() +
-  theme(legend.position = "none") +
-    coord_flip()
-```
-
-```{r}
-d_neighborhood %>% 
-  mutate(neighborhood = fct_reorder(neighborhood, fractional_screen_in, .desc = FALSE)) %>% 
-  top_n(n = 10, wt = fractional_screen_in) %>% 
-  ggplot(aes(x = neighborhood, y = fractional_screen_in, fill = fractional_screen_in)) +
-    geom_bar(stat='identity') +
-    labs(title = 'Screen-Ins per Intake by Neighborhood',
-          y = 'Number of Screen-Ins Per Intake') +
-    theme(axis.title.y = element_blank()) +
-  scale_fill_viridis_c() +
-  theme(legend.position = "none") +
-    coord_flip()
-```
-
+## Maps by Intake
 
 ```{r, fig.width = 10, fig.height=8}
 tm_basemap("CartoDB.Positron") +
   tm_shape(d_neighborhood) +
-  tm_polygons(col = c('n_intakes_per_1000',
-                      'n_screened_in_per_1000',
-                      'fractional_screen_in',
-                      'dep_index'),
+  tm_polygons(col = c('n_intakes_per_1000hh',
+                      'n_intakes_screened_in_per_1000hh',
+                      'intake_fractional_screen_in',
+                      'intake_fractional_screen_in'),
               title = c('Intake Rate',
-                        'Screen-In Rate',
-                        'Fractional Screen-In',
+                        'Intake Screen-In Rate',
+                        'Screen-In/Intake',
                         'Deprivation Index'),
+              popup.vars = c('Intake Rate' = 'n_intakes_per_1000hh',
+                        'Intake Screen-In Rate' = 'n_intakes_screened_in_per_1000hh',
+                        'Screen-In/Intake' = 'intake_fractional_screen_in',
+                        'Deprivation Index' = 'dep_index'),
+              alpha = 0.8,
+              palette = 'viridis') +
+  tm_scale_bar() +
+  tm_layout(frame = FALSE,
+            asp = 4)
+```
+
+## Maps by Alleged Child Victim
+
+```{r, fig.width = 10, fig.height=8}
+tm_basemap("CartoDB.Positron") +
+  tm_shape(d_neighborhood) +
+  tm_polygons(col = c('n_children_per_1000',
+                      'n_children_screened_in_per_1000',
+                      'child_fractional_screen_in',
+                      'dep_index'),
+              title = c('ACV Rate',
+                        'ACV Screen-In Rate',
+                        'Screen-In/ACV',
+                        'Deprivation Index'),
+              popup.vars = c('ACV Rate' = 'n_children_per_1000',
+                        'ACV Screen-In Rate' = 'n_children_screened_in_per_1000',
+                        'Screen-In/ACV' = 'child_fractional_screen_in',
+                        'Deprivation Index' = 'dep_index'),
               alpha = 0.8,
               palette = 'viridis') +
   tm_scale_bar() +
