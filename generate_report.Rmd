@@ -139,11 +139,13 @@ d_neighborhood <- neighborhood_shp %>%
          intake_fractional_screen_in = n_intakes_screened_in_per_1000hh/n_intakes_per_1000hh,
          n_children_per_1000 = n_children/pop_under_18*1000,
          n_children_screened_in_per_1000 = n_children_screened_in/pop_under_18*1000,
-         child_fractional_screen_in = n_children_screened_in_per_1000/n_children_per_1000)
+         child_fractional_screen_in = n_children_screened_in_per_1000/n_children_per_1000) %>%
+  mutate_if(is.numeric, ~round(.x, digits = 2))
   
 d_neighborhood %>%
   st_drop_geometry() %>% 
   select(Neighborhood = neighborhood, 
+         `Deprivation Index` = dep_index,
         `Number of Intakes` = n_intakes, 
         `Intakes Screened In` = n_intakes_screened_in,
         `Number of Households` = num_hh, 
