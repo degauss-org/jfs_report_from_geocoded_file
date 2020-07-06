@@ -169,7 +169,7 @@ tm_basemap("CartoDB.Positron") +
   tm_polygons(col = c('n_intakes_per_1000hh',
                       'n_intakes_screened_in_per_1000hh',
                       'intake_fractional_screen_in',
-                      'intake_fractional_screen_in'),
+                      'dep_index'),
               title = c('Intake Rate',
                         'Intake Screen-In Rate',
                         'Screen-In/Intake',
