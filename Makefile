@@ -9,7 +9,7 @@ build:
 	docker build -t $(IMAGE) .
 
 test:
-	docker run --rm -v "${PWD}/test":/tmp $(IMAGE) sample_addresses_geocoded.csv child_sample_addresses_geocoded.csv
+	docker run --rm -v "${PWD}/test":/tmp $(IMAGE) aft_example_data_long_geocoded.csv
 	cp test/sample_addresses_geocoded_report.html docs/index.html
 
 shell:

@@ -5,8 +5,7 @@ output:
   html_document:
     df_print: kable
 params: 
-  d_intake: d_intake
-  d_child: d_child
+  d: d
 ---
 
 ```{r setup, include=FALSE}
@@ -20,42 +19,88 @@ tmap_mode('view')
 ```
 
 ```{r}
-d_intake <- params$d_intake
-d_child <- params$d_child
+d <- params$d
+# d <- read_csv('test/aft_example_data_long_geocoded.csv',
+#                             col_types = cols(INTAKE_ID = col_character(),
+#                                PERSON_ID = col_character(),
+#                                REPORTER_PERSON_ID = col_character(),
+#                                PROVIDER_ID = col_character(),
+#                                fips_tract_id = col_character()))
 ```
 
 # Overall Summary
 
 ```{r}
-intake_geocode_summary <- d_intake %>% 
+date_min <- min(d$DECISION_DATE)
+date_max <- max(d$DECISION_DATE)
+```
+
+This report describes `r length(unique(d$INTAKE_ID))` unique intakes with descision dates between `r date_min` and `r date_max` and `r length(unique(d$PERSON_ID))` unique alleged child victims.
+
+```{r}
+d_missing_alleg_add <- d %>% 
+  group_by(INTAKE_ID) %>% 
+  filter(address_type == 'ALLEGATION_ADDRESS', 
+         is.na(address)) %>% 
+  select(INTAKE_ID:address_type)
+
+d_fill_in_address <- d %>% 
+  filter(INTAKE_ID %in% d_missing_alleg_add$INTAKE_ID, 
+         address_type == 'CHILD_ADDRESS') %>% 
+  group_by(INTAKE_ID) %>% 
+  arrange(desc(ADDRESS_START)) %>% 
+  slice(1) %>% 
+  select(INTAKE_ID, address:dep_index)
+
+d_missing_alleg_add <- left_join(d_missing_alleg_add, d_fill_in_address, by = 'INTAKE_ID')
+
+d <- d %>% 
+  filter(address_type == 'ALLEGATION_ADDRESS' & !is.na(address) |
+           address_type == 'CHILD_ADDRESS') %>% 
+  bind_rows(d_missing_alleg_add) %>% 
+  filter(address_type == 'ALLEGATION_ADDRESS')
+```
+
+`r nrow(d_missing_alleg_add)` intakes are missing allegation address. The most recently entered child address will be used.
+
+### Geocoding Summary
+
+```{r}
+intake_geocode_summary <- d %>% 
+  filter(!duplicated(INTAKE_ID)) %>% 
   group_by(is.na(lat)) %>% 
   tally() %>% 
   mutate(pct = round(n/sum(n)*100,1))
 
-child_geocode_summary <- d_child %>% 
+child_geocode_summary <- d %>% 
+  filter(!duplicated(PERSON_ID)) %>% 
   group_by(is.na(lat)) %>% 
   tally() %>% 
   mutate(pct = round(n/sum(n)*100,1))
 
 rbind(intake_geocode_summary, child_geocode_summary) %>% 
   filter(`is.na(lat)` == FALSE) %>% 
-  mutate(File = c('Intake', 'ACV'), 
-         `Number of Rows` = c(nrow(d_intake), nrow(d_child)),
-         `Number Geocoded` = paste0(n, " (", pct, "%)")) %>% 
-  select(File, `Number of Rows`, `Number Geocoded`)
+  mutate(Level = c('Intake', 'ACV'), 
+         `N` = c(length(unique(d$INTAKE_ID)), length(unique(d$PERSON_ID))),
+         `N (%) Geocoded` = paste0(n, " (", pct, "%)")) %>% 
+  select(Level, `N`, `N (%) Geocoded`)
 ```
 
+### Deprivation Index by Screening Decision Summary
 
+Intakes
 
 ```{r, eval=F}
-intake_dep_summary <- d_intake %>% 
-  filter(!is.na(lat)) %>% 
+intake_dep_summary <- d %>% 
+  filter(!duplicated(INTAKE_ID), 
+         !is.na(lat)) %>% 
   group_by(SCREENING_DECISION) %>% 
   summarize(mean_dep = round(mean(dep_index, na.rm = T),2), 
             sd_dep = round(sd(dep_index, na.rm = T), 1))
 
-d_intake %>% 
-  filter(!is.na(lat)) %>% 
+d %>% 
+  filter(!duplicated(INTAKE_ID), 
+         !is.na(lat)) %>% 
   group_by(SCREENING_DECISION) %>% 
   tally() %>% 
   mutate(pct = round(n/sum(n)*100,1),
@@ -66,14 +111,16 @@ d_intake %>%
 ```
 
 ```{r, eval = F}
-child_dep_summary <- d_child %>% 
-  filter(!is.na(lat)) %>% 
+child_dep_summary <- d %>% 
+  filter(!duplicated(PERSON_ID), 
+         !is.na(lat)) %>% 
   group_by(SCREENING_DECISION) %>% 
   summarize(mean_dep = round(mean(dep_index, na.rm = T),2), 
             sd_dep = round(sd(dep_index, na.rm = T), 1))
 
-d_child %>% 
-  filter(!is.na(lat)) %>% 
+d %>% 
+  filter(!duplicated(PERSON_ID),
+         !is.na(lat)) %>% 
   group_by(SCREENING_DECISION) %>% 
   tally() %>% 
   mutate(pct = round(n/sum(n)*100,1),
@@ -88,17 +135,17 @@ d_child %>%
 ```{r}
 tract_to_neighborhood <- readRDS('/app/tract_to_neighborhood.rds')
 
-d_intake <- d_intake  %>%
-  select(INTAKE_ID:fips_tract_id) %>% 
+d_neigh_intake <- d  %>%
+  filter(!duplicated(INTAKE_ID)) %>% 
   mutate(fips_tract_id = as.character(fips_tract_id)) %>% 
   filter(!is.na(lat)) %>% 
   left_join(tract_to_neighborhood, by='fips_tract_id')
 
-intakes_neighborhood <- d_intake %>% 
+intakes_neighborhood <- d_neigh_intake %>% 
   group_by(neighborhood) %>% 
   summarize(n_intakes = n())
 
-intake_screen_neighborhood <- d_intake %>% 
+intake_screen_neighborhood <- d_neigh_intake %>% 
   group_by(neighborhood, SCREENING_DECISION) %>% 
   tally() %>% 
   filter(SCREENING_DECISION == 'SCREENED IN') %>% 
@@ -106,17 +153,17 @@ intake_screen_neighborhood <- d_intake %>%
   select(-n, -SCREENING_DECISION) %>% 
   left_join(intakes_neighborhood, by = 'neighborhood')
 
-d_child <- d_child  %>%
-  select(ACV_ID:fips_tract_id) %>% 
+d_neigh_child <- d  %>%
+  filter(!duplicated(PERSON_ID)) %>% 
   mutate(fips_tract_id = as.character(fips_tract_id)) %>% 
   filter(!is.na(lat)) %>% 
   left_join(tract_to_neighborhood, by='fips_tract_id')
 
-child_neighborhood <- d_child %>% 
+child_neighborhood <- d_neigh_child %>% 
   group_by(neighborhood) %>% 
   summarize(n_children = n())
 
-child_screen_neighborhood <- d_child %>% 
+child_screen_neighborhood <- d_neigh_child %>% 
   group_by(neighborhood, SCREENING_DECISION) %>% 
   tally() %>% 
   filter(SCREENING_DECISION == 'SCREENED IN') %>% 
@@ -179,7 +226,8 @@ tm_basemap("CartoDB.Positron") +
                         'Screen-In/Intake' = 'intake_fractional_screen_in',
                         'Deprivation Index' = 'dep_index'),
               alpha = 0.8,
-              palette = 'viridis') +
+              #palette = 'viridis'
+              ) +
   tm_scale_bar() +
   tm_layout(frame = FALSE,
             asp = 4)
@@ -203,7 +251,8 @@ tm_basemap("CartoDB.Positron") +
                         'Screen-In/ACV' = 'child_fractional_screen_in',
                         'Deprivation Index' = 'dep_index'),
               alpha = 0.8,
-              palette = 'viridis') +
+             # palette = 'viridis'
+             ) +
   tm_scale_bar() +
   tm_layout(frame = FALSE,
             asp = 4)

@@ -250,7 +250,7 @@ mapview::mapview(city_outline)
 aws.s3::s3saveRDS(city_outline, "s3://geomarker/geometries/cincinnati_city_outline.rds")
 
 ham_co_pop <- tidycensus::get_acs(geography = 'tract',
-                    variables = c(paste0('B01001_00', 1:6), paste0('B01001_0', 27:30)),
+                    variables = c(paste0('B01001_00', 3:6), paste0('B01001_0', 27:30)),
                     year = 2018,
                     state = 'Ohio',
                     county = 'Hamilton') %>%
