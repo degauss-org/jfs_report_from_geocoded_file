@@ -61,7 +61,7 @@ d <- d %>%
   filter(address_type == 'ALLEGATION_ADDRESS')
 ```
 
-`r nrow(d_missing_alleg_add)` intakes are missing allegation address. The most recently entered child address will be used.
+`r length(unique(d_missing_alleg_add$INTAKE_ID))` intakes are missing allegation address. The most recently entered child address will be used.
 
 ### Geocoding Summary
 
@@ -90,7 +90,7 @@ rbind(intake_geocode_summary, child_geocode_summary) %>%
 
 Intakes
 
-```{r, eval=F}
+```{r}
 intake_dep_summary <- d %>% 
   filter(!duplicated(INTAKE_ID), 
          !is.na(lat)) %>% 
@@ -110,7 +110,9 @@ d %>%
   select(Decision = SCREENING_DECISION, `N (%)`, `Deprivation Index Mean (sd) ` = mean_sd)
 ```
 
-```{r, eval = F}
+ACV 
+
+```{r}
 child_dep_summary <- d %>% 
   filter(!duplicated(PERSON_ID), 
          !is.na(lat)) %>% 
@@ -129,6 +131,33 @@ d %>%
   mutate(mean_sd = glue::glue('{mean_dep} ({sd_dep})')) %>% 
   select(Decision = SCREENING_DECISION, `N (%)`, `Deprivation Index Mean (sd) ` = mean_sd)
 ```
+
+### Mandated Reporter Summary
+
+```{r}
+d_mandated <- d %>% 
+  filter(MANDATED_REPORTER == 'Yes')
+
+d_mandated_intakes <- unique(d_mandated$INTAKE_ID)
+
+d <- d %>% 
+  mutate(at_least_one_mandated_reporter = ifelse(INTAKE_ID %in% d_mandated_intakes, 'yes', 'no')) 
+```
+
+`r length(d_mandated_intakes)` (`r round(length(d_mandated_intakes)/length(unique(d$INTAKE_ID))*100,1)`) intakes were reported by at least one mandated reporter.
+
+```{r}
+d %>% 
+  filter(!duplicated(INTAKE_ID), 
+         !is.na(lat)) %>% 
+  group_by(at_least_one_mandated_reporter, SCREENING_DECISION) %>% 
+  tally() %>% 
+  mutate(pct = round(n/sum(n)*100,1),
+         `N (%)` = glue::glue('{n} ({pct}%)')) %>% 
+  select(`At Least One Mandated Reporter` = at_least_one_mandated_reporter, 
+         Decision = SCREENING_DECISION, `N (%)`)
+```
+
 
 # Neighborhood Summary
 
@@ -153,6 +182,23 @@ intake_screen_neighborhood <- d_neigh_intake %>%
   select(-n, -SCREENING_DECISION) %>% 
   left_join(intakes_neighborhood, by = 'neighborhood')
 
+mr_intakes_neighborhood <- d_neigh_intake %>% 
+  group_by(neighborhood, at_least_one_mandated_reporter) %>% 
+  summarize(n_mandated_reporter_intakes = n()) %>% 
+  filter(at_least_one_mandated_reporter == 'yes') %>% 
+  ungroup() %>% 
+  select(-at_least_one_mandated_reporter)
+
+mr_intake_screen_neighborhood <- d_neigh_intake %>% 
+  group_by(neighborhood, at_least_one_mandated_reporter, SCREENING_DECISION) %>% 
+  tally() %>% 
+  filter(at_least_one_mandated_reporter == 'yes', 
+         SCREENING_DECISION == 'SCREENED IN') %>% 
+  mutate(n_mandated_reporter_intakes_screened_in = n) %>% 
+  ungroup() %>% 
+  select(neighborhood, n_mandated_reporter_intakes_screened_in) %>% 
+  left_join(mr_intakes_neighborhood, by = 'neighborhood')
+
 d_neigh_child <- d  %>%
   filter(!duplicated(PERSON_ID)) %>% 
   mutate(fips_tract_id = as.character(fips_tract_id)) %>% 
@@ -172,21 +218,27 @@ child_screen_neighborhood <- d_neigh_child %>%
   left_join(child_neighborhood, by = 'neighborhood')
 
 d_neighborhood <- intake_screen_neighborhood %>% 
-  left_join(child_screen_neighborhood, by = 'neighborhood')
+  left_join(child_screen_neighborhood, by = 'neighborhood') %>% 
+  left_join(mr_intake_screen_neighborhood, by = 'neighborhood')
 
 neighborhood_shp <- readRDS('/app/ham_neighborhoods_dep_index_shp.rds')
 
 d_neighborhood <- neighborhood_shp %>% 
   left_join(d_neighborhood, by = 'neighborhood') %>% 
   mutate_at(vars(n_intakes, n_intakes_screened_in, 
-                 n_children, n_children_screened_in), 
+                 n_children, n_children_screened_in,
+                 n_mandated_reporter_intakes, n_mandated_reporter_intakes_screened_in), 
             ~ifelse(.x < 10, NA, .x)) %>% 
   mutate(n_intakes_per_1000hh = n_intakes/num_hh*1000,
          n_intakes_screened_in_per_1000hh = n_intakes_screened_in/num_hh*1000,
          intake_fractional_screen_in = n_intakes_screened_in_per_1000hh/n_intakes_per_1000hh,
          n_children_per_1000 = n_children/pop_under_18*1000,
          n_children_screened_in_per_1000 = n_children_screened_in/pop_under_18*1000,
-         child_fractional_screen_in = n_children_screened_in_per_1000/n_children_per_1000) %>%
+         child_fractional_screen_in = n_children_screened_in_per_1000/n_children_per_1000,
+         n_intakes_by_mandated_reporter_per_1000hh = n_mandated_reporter_intakes/num_hh*1000,
+         n_intakes_by_mandated_reporter_screened_in_per_1000hh = n_mandated_reporter_intakes_screened_in/num_hh*1000,
+         intake_by_mandated_reporter_fractional_screen_in = 
+           n_intakes_by_mandated_reporter_screened_in_per_1000hh/n_intakes_by_mandated_reporter_per_1000hh) %>%
   mutate_if(is.numeric, ~round(.x, digits = 2))
   
 d_neighborhood %>%
@@ -204,7 +256,12 @@ d_neighborhood %>%
         `Population under 18` = pop_under_18,
         `ACV Rate` = n_children_per_1000, 
         `ACV Screen-In Rate` = n_children_screened_in_per_1000,
-        `Screen-In/ACV` = child_fractional_screen_in) %>% 
+        `Screen-In/ACV` = child_fractional_screen_in,
+        `Number of Intakes by Mandated Reporter` = n_mandated_reporter_intakes,
+        `Intakes by Mandated Reporter Screened In` = n_mandated_reporter_intakes_screened_in,
+        `Mandated Reporter Intake Rate` = n_intakes_by_mandated_reporter_per_1000hh,
+        `Mandated Reporter Intake Screen-In Rate` = n_intakes_by_mandated_reporter_screened_in_per_1000hh,
+        `Mandated Reporter Screen-In/Intake` = intake_by_mandated_reporter_fractional_screen_in) %>% 
   DT::datatable()
 ```
 
@@ -224,6 +281,31 @@ tm_basemap("CartoDB.Positron") +
               popup.vars = c('Intake Rate' = 'n_intakes_per_1000hh',
                         'Intake Screen-In Rate' = 'n_intakes_screened_in_per_1000hh',
                         'Screen-In/Intake' = 'intake_fractional_screen_in',
+                        'Deprivation Index' = 'dep_index'),
+              alpha = 0.8,
+              #palette = 'viridis'
+              ) +
+  tm_scale_bar() +
+  tm_layout(frame = FALSE,
+            asp = 4)
+```
+
+## Maps by Intake (Mandated Reporter)
+
+```{r, fig.width = 10, fig.height=8}
+tm_basemap("CartoDB.Positron") +
+  tm_shape(d_neighborhood) +
+  tm_polygons(col = c('n_intakes_by_mandated_reporter_per_1000hh',
+                      'n_intakes_by_mandated_reporter_screened_in_per_1000hh',
+                      'intake_by_mandated_reporter_fractional_screen_in',
+                      'dep_index'),
+              title = c('Mandated Reporter Intake Rate',
+                        'Mandated Reporter Intake Screen-In Rate',
+                        'Mandated Reporter Screen-In/Intake',
+                        'Deprivation Index'),
+              popup.vars = c('Mandated Reporter Intake Rate' = 'n_intakes_by_mandated_reporter_per_1000hh',
+                        'Mandated Reporter Intake Screen-In Rate' = 'n_intakes_by_mandated_reporter_screened_in_per_1000hh',
+                        'Mandated Reporter Screen-In/Intake' = 'intake_by_mandated_reporter_fractional_screen_in',
                         'Deprivation Index' = 'dep_index'),
               alpha = 0.8,
               #palette = 'viridis'
