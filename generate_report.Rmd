@@ -144,7 +144,7 @@ d <- d %>%
   mutate(at_least_one_mandated_reporter = ifelse(INTAKE_ID %in% d_mandated_intakes, 'yes', 'no')) 
 ```
 
-`r length(d_mandated_intakes)` (`r round(length(d_mandated_intakes)/length(unique(d$INTAKE_ID))*100,1)`) intakes were reported by at least one mandated reporter.
+`r length(d_mandated_intakes)` (`r round(length(d_mandated_intakes)/length(unique(d$INTAKE_ID))*100,1)`%) intakes were reported by at least one mandated reporter.
 
 ```{r}
 d %>% 
