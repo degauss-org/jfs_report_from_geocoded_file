@@ -98,3 +98,38 @@ d <- d %>%
 d
 write_csv(d, 'test/simulated_jfs_data.csv')
 
+# after geocoding...
+d_geo <- read_csv('test/simulated_jfs_data_geocoded.csv', guess_max = 2000) %>%
+  mutate(fips_tract_id = as.character(fips_tract_id))
+
+# if allegation address is missing...
+d_missing_alleg_add <- d_geo %>%
+  group_by(INTAKE_ID) %>%
+  filter(address_type == 'ALLEGATION_ADDRESS',
+         is.na(address)) %>%
+  select(INTAKE_ID:address_type)
+
+# fill in with most recent child address
+d_fill_in_address <- d_geo %>%
+  filter(INTAKE_ID %in% d_missing_alleg_add$INTAKE_ID,
+         address_type == 'CHILD_ADDRESS') %>%
+  group_by(INTAKE_ID) %>%
+  arrange(desc(ADDRESS_START)) %>%
+  slice(1) %>%
+  select(INTAKE_ID, address:dep_index)
+
+d_missing_alleg_add <- left_join(d_missing_alleg_add, d_fill_in_address, by = 'INTAKE_ID')
+
+d_geo <- d_geo %>%
+  filter(address_type == 'ALLEGATION_ADDRESS' & !is.na(address) |
+           address_type == 'CHILD_ADDRESS') %>%
+  bind_rows(d_missing_alleg_add) %>%
+  filter(address_type == 'ALLEGATION_ADDRESS')
+
+# join to neighborhoods file
+tract_to_neighborhood <- readRDS('tract_to_neighborhood.rds')
+
+d_geo <- d_geo %>%
+  left_join(tract_to_neighborhood, by='fips_tract_id')
+
+write_csv(d_geo, 'test/simulated_jfs_data_geocoded_neighborhood.csv')
