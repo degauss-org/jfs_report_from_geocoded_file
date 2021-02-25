@@ -20,7 +20,7 @@ tmap_mode('view')
 
 ```{r}
 d <- params$d
-# d <- read_csv('test/aft_example_data_long_geocoded.csv',
+# d <- read_csv('test/simulated_jfs_data_geocoded.csv.csv',
 #                             col_types = cols(INTAKE_ID = col_character(),
 #                                PERSON_ID = col_character(),
 #                                REPORTER_PERSON_ID = col_character(),
