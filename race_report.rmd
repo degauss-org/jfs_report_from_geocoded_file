@@ -117,11 +117,15 @@ intake_geocode_summary <- d_intake %>%
 
 ```{r}
 ### Race Reporter Summary
-d_white <- d %>% 
-  filter(RACE == 'White')
+d_bw <- d %>% 
+  filter(RACE %in% c('White', 'Black/African American'))
 
-d_black <- d %>%
-  filter(RACE == 'Black/African American')
+'%notin%'<-Negate('%in%')
+d_other<-d %>%
+  filter(RACE %notin% c('White', 'Black/African American'))
+
+d_intake_other <- d_intake %>%
+  filter(RACE %notin% c("White", "Black/African American"))
 
 d_intake <- d_intake %>%
   filter(RACE %in% c("White", "Black/African American")) #Only looking at black vs white
@@ -136,11 +140,23 @@ race_summary <- d_intake %>%
   tally() %>% 
   mutate(pct = round(n/sum(n)*100,1)) %>% 
   select(RACE, Decision = SCREENING_DECISION, n, pct)
+
+race_summary_other <- d_intake_other %>% 
+  filter(!is.na(lat)) %>% 
+  group_by(SCREENING_DECISION) %>% #group by race first to see each indiv race breakdown
+  tally() %>% 
+  mutate(pct = round(n/sum(n)*100,1)) %>% 
+  select(Decision = SCREENING_DECISION, n, pct)
+
 ```
 
 - `r race_summary$n[3]` (`r race_summary$pct[3]`%) intakes of a **White ACV**  were **screened in**. `r race_summary$n[4]` (`r race_summary$pct[4]`%) intakes of a **White ACV** were **screened out**.
 
 - `r race_summary$n[1]` (`r race_summary$pct[1]`%) intakes of a  **Black/African American ACV** were **screened in**. `r race_summary$n[2]` (`r race_summary$pct[2]`%) intakes of a **Black/African American ACV** were **screened out**.
+
+- There were `r nrow(d_intake_other)` intakes of **neither** a White nor Black/African American ACV.
+
+- `r race_summary_other$n[1]` (`r race_summary_other$pct[1]`%) intakes of a **Non-White nor Black/African American ACV**  were **screened in**. `r race_summary_other$n[2]` (`r race_summary_other$pct[2]`%) intakes of a **Non-White nor Black/African American ACV** were **screened out**.
 
 # Neighborhood Summary
 
