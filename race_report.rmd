@@ -308,13 +308,13 @@ tm_basemap("CartoDB.Positron") +
 source("p_general_join.R", local = knitr::knit_global())
 date_agg <- 'week'
 
-screen_shifts <- tribble(
+acv_screen_shifts <- tribble(
   ~MEASURE, ~CENTERLINE_START, ~CENTERLINE_END) %>%
   mutate(CENTERLINE_START=ymd(CENTERLINE_START),
          CENTERLINE_END=ymd(CENTERLINE_END),
          IN_CALC=TRUE)
 
-screen_data <- d_acv %>%
+acv_screen_data <- d_acv %>%
   mutate(REPORT_WEEK = floor_date(DECISION_DATE, date_agg)) %>%
   group_by(REPORT_WEEK) %>%
   summarise(NUM = sum(SCREENING_DECISION == 'SCREENED IN',na.rm = TRUE),
@@ -322,25 +322,29 @@ screen_data <- d_acv %>%
             .groups = 'drop') %>%
   mutate(RATE = NUM/DENOM*1.0,
          MEASURE = 'SCREENED_IN')
+acv_screen_data<-acv_screen_data[-54,]#remove na row at end of group
 
-screen_centers <- p_chart_centerlines(data = screen_data,
+acv_screen_centers <- p_chart_centerlines(data = acv_screen_data,
                               date_name = 'REPORT_WEEK',
                               factor = c('MEASURE'),
-                              shifts = screen_shifts,
+                              shifts = acv_screen_shifts,
                               base_start_date = ymd(date_min),
                               base_end_date = ymd(date_max),
                               numer = 'NUM',
                               denom = 'DENOM',
                               time_period = date_agg)
 
-cc_screened_in <- control_chart_plot(screen_centers, 
+acv_screened_in <- control_chart_plot(acv_screen_centers, 
                                      x_axis = REPORT_WEEK, 
                                      y_axis = RATE) +
-  ggtitle('Screen In Rate by ACV')
-cc_screened_in
+  ggtitle('Screen In Rate')
+acv_screened_in
 ```
 
 ```{r}
+#d_intake <- rename(d_intake, MANDATED_REPORTER_STATUS = at_least_one_mandated_reporter) %>% 
+#  mutate(MANDATED_REPORTER_STATUS = ifelse(MANDATED_REPORTER_STATUS == 'yes', 'Mandated Reporter', 'Non-Mandated Reporter'))
+
 race_sreen_shifts <- tribble(
   ~RACE, ~MEASURE, ~CENTERLINE_START, ~CENTERLINE_END) %>%
   mutate(CENTERLINE_START = ymd(CENTERLINE_START),
@@ -355,6 +359,7 @@ race_screen_data <- d_acv %>%
             .groups = 'drop') %>%
   mutate(RATE = NUM/DENOM*1.0,
          MEASURE = 'SCREENED_IN')
+race_screen_data<-race_screen_data[-c(54,108),]#remove na rows at end of each group's period
 
 race_centers <- p_chart_centerlines(data = race_screen_data,
                                   date_name = 'REPORT_WEEK',
