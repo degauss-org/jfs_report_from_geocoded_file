@@ -224,11 +224,11 @@ d_neighborhood <- neighborhood_shp %>%
                  n_black_acvs, 
                  n_black_acvs_screened_in), 
             ~ifelse(.x < 10, NA, .x)) %>%  # suppress if n < 10 for privacy reasons
-  mutate(n_acvs_per_1000hh = n_acvs/num_hh*1000,
+  mutate(n_acvs_per_1000 = n_acvs/pop_under_18*1000,
          acvs_fractional_screen_in = n_acvs_screened_in/n_acvs,
-         n_acvs_white_per_1000hh = n_white_acvs/num_hh*1000,
+         n_acvs_white_per_1000 = n_white_acvs/pop_under_18*1000,
          acvs_white_fractional_screen_in = n_white_acvs_screened_in/n_white_acvs,
-         n_acvs_black_per_1000hh = n_black_acvs/num_hh*1000,
+         n_acvs_black_per_1000 = n_black_acvs/pop_under_18*1000,
          acvs_black_fractional_screen_in = n_black_acvs_screened_in/n_black_acvs) %>%
   mutate_if(is.numeric, ~round(.x, digits = 2))
   
@@ -237,15 +237,15 @@ d_neighborhood %>%
   select(Neighborhood = neighborhood, 
         `Number of ACVs` = n_acvs, 
         `ACVs Screened In` = n_acvs_screened_in,
-        `Number of Households` = num_hh, 
-        `Number ACVs per 1000 Households` = n_acvs_per_1000hh,
+        `Population Under 18` = pop_under_18, 
+        `Number ACVs per 1000 Children` = n_acvs_per_1000,
         `Fraction of ACVs Screened In` = acvs_fractional_screen_in,
         `Number of White ACVs` = n_white_acvs,
-        `White ACVs per 1000 Households` = n_acvs_white_per_1000hh,
+        `White ACVs per 1000 Children` = n_acvs_white_per_1000,
         `White ACVs Screened In` = n_white_acvs_screened_in,
         `Fraction of White ACVs Screened In` = acvs_white_fractional_screen_in,
         `Number of Black/African American ACVs` = n_black_acvs,
-        `Black/African American ACVs per 1000 Households` = n_acvs_black_per_1000hh,
+        `Black/African American ACVs per 1000 Children` = n_acvs_black_per_1000,
         `Black/African American ACVs Screened In` = n_black_acvs_screened_in,
         `Fraction of Black/African American ACVs Screened In` = acvs_black_fractional_screen_in,
         `Deprivation Index` = dep_index) %>% 
@@ -256,19 +256,19 @@ d_neighborhood %>%
 
 The maps below are interactive and can be panned and zoomed. Clicking on a neighborhood will provide a pop-up with more information about that neighborhood.
 
-### ACVs per 1000 Households
+### ACVs per 1000 Children
 
-The two maps below show the ACV Rate (number of acvs per 1000 households) by neighborhood and by race.  
+The two maps below show the ACV Rate (number of acvs per 1000 children) by neighborhood and by race.  
 
 ```{r, fig.width = 10, fig.height=8}
 tm_basemap("CartoDB.Positron") +
   tm_shape(d_neighborhood) +
-  tm_polygons(col = c('n_acvs_white_per_1000hh',
-                      'n_acvs_black_per_1000hh'),
+  tm_polygons(col = c('n_acvs_white_per_1000',
+                      'n_acvs_black_per_1000'),
               title = c('White',
                         'Black/African American'),
-              popup.vars = c('White ACVs per 1000 Households' = 'n_acvs_white_per_1000hh',
-                             'Black/African American ACVs per 1000 Households' = 'n_acvs_black_per_1000hh'),
+              popup.vars = c('White ACVs per 1000 Children' = 'n_acvs_white_per_1000',
+                             'Black/African American ACVs per 1000 Children' = 'n_acvs_black_per_1000'),
               alpha = 0.8,
               palette = 'Blues') +
   tm_scale_bar() +
@@ -280,7 +280,7 @@ tm_basemap("CartoDB.Positron") +
 
 ### Fraction of ACVs Screened In
 
-The two maps below show the Fraction of ACVs Screened In (number of intakes that were screened in / number of intakes) by neighborhood and by race. 
+The two maps below show the Fraction of ACVs Screened In (number of ACVs that were screened in / number of ACVs) by neighborhood and by race. 
 
 ```{r, fig.width = 10, fig.height=8}
 tm_basemap("CartoDB.Positron") +
