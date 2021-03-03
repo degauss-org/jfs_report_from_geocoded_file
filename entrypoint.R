@@ -45,7 +45,12 @@ d <- read_csv(args$file_name,
                                dep_index = col_double()
                                ))
 
-rmarkdown::render(input = '/app/generate_report.Rmd',
+rmarkdown::render(input = '/app/mandated_reporter_report.Rmd',
+                  params = list(d = d),
+                  envir = new.env(),
+                  output_file = fs::path("/tmp", paste0(gsub('.csv', '', args$file_name, fixed=TRUE), '_report.html')))
+
+rmarkdown::render(input = '/app/race_report.Rmd',
                   params = list(d = d),
                   envir = new.env(),
                   output_file = fs::path("/tmp", paste0(gsub('.csv', '', args$file_name, fixed=TRUE), '_report.html')))
