@@ -28,4 +28,4 @@ will produce `sample_addresses_geocoded_mandated_reporter_report.html` and `samp
 
 ## DeGAUSS details
 
-For detailed documentation on DeGAUSS, including general usage and installation, please see the [DeGAUSS README](https://github.com/degauss-org/DeGAUSS).
+For detailed documentation on DeGAUSS, including general usage and installation, please see the [DeGAUSS README](https://degauss.org/).
