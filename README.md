@@ -15,10 +15,6 @@ docker run --rm -v $PWD:/tmp degauss/jfs_report_from_geocoded_file:0.1 sample_ad
 
 will produce `sample_addresses_geocoded_mandated_reporter_report.html` and `sample_addresses_geocoded_race_report.html`.
 
-[example mandated reporter report](https://github.com/degauss-org/jfs_report_from_geocoded_file/blob/master/mandated_reporter_report.html)
-
-[example race report](https://github.com/degauss-org/jfs_report_from_geocoded_file/blob/master/race_report.html)
-
 ## geomarker data
 
 - census tract-level [deprivation index](https://geomarker.io/dep_index/) from 2015 ACS measures

@@ -1,0 +1,13 @@
+---
+title: "JFS DeGAUSS Example Reports"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+[example mandated reporter report](https://github.com/degauss-org/jfs_report_from_geocoded_file/blob/master/mandated_reporter_report.html)
+
+[example race report](https://github.com/degauss-org/jfs_report_from_geocoded_file/blob/master/race_report.html)
