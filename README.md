@@ -13,9 +13,11 @@ If `sample_addresses_geocoded.csv` is a file in the current working directory wi
 docker run --rm -v $PWD:/tmp degauss/jfs_report_from_geocoded_file:0.1 sample_addresses_geocoded.csv
 ```
 
-will produce `sample_addresses_geocoded_report.html`.
+will produce `sample_addresses_geocoded_mandated_reporter_report.html` and `sample_addresses_geocoded_race_report.html`.
 
-[example report](http://degauss.org/jfs_report_from_geocoded_file)
+[example mandated reporter report](https://github.com/degauss-org/jfs_report_from_geocoded_file/blob/master/mandated_reporter_report.html)
+
+[example race report](https://github.com/degauss-org/jfs_report_from_geocoded_file/blob/master/race_report.html)
 
 ## geomarker data
 
