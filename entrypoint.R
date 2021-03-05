@@ -8,7 +8,7 @@ p <- add_argument(p,'file_name',help='name of geocoded csv file')
 args <- parse_args(p)
 
 # args <- list()
-# args$file_name <- "sample_addresses_geocoded.csv"
+# args$file_name <- "simulated_jfs_data_geocoded.csv"
 
 # INTAKE_ID
 # SCREENING_DECISION = SCREENED OUT or SCREENED IN
