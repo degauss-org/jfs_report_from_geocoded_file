@@ -77,7 +77,6 @@ for (i in 1:nrow(d)) {
 
 ```{r eval=T}
 d_missing_alleg_add <- d %>% 
-  group_by(PERSON_ID) %>% 
   filter(address_type == 'ALLEGATION_ADDRESS', 
          is.na(address)) %>% 
   select(PERSON_ID:address_type)
@@ -133,6 +132,7 @@ race_summary <- d_acv %>%
   filter(!is.na(lat)) %>% 
   group_by(RACE, SCREENING_DECISION) %>% 
   tally() %>% 
+  ungroup() %>% 
   mutate(pct = round(n/sum(n)*100,1)) %>% 
   select(RACE, Decision = SCREENING_DECISION, n, pct)
 
@@ -140,6 +140,7 @@ race_summary_other <- d_acv_other %>%
   filter(!is.na(lat)) %>% 
   group_by(SCREENING_DECISION) %>% #group by race first to see each indiv race breakdown
   tally() %>% 
+  ungroup() %>% 
   mutate(pct = round(n/sum(n)*100,1)) %>% 
   select(Decision = SCREENING_DECISION, n, pct)
 
@@ -170,6 +171,7 @@ acv_neighborhood <- d_neigh_acv %>%
 acv_screen_neighborhood <- d_neigh_acv %>% 
   group_by(neighborhood, SCREENING_DECISION) %>% 
   tally() %>% 
+  ungroup() %>% 
   filter(SCREENING_DECISION == 'SCREENED IN') %>% 
   mutate(n_acvs_screened_in = n) %>% 
   select(-n, -SCREENING_DECISION) %>% 
@@ -179,17 +181,17 @@ acv_screen_neighborhood <- d_neigh_acv %>%
 white_acv_neighborhood <- d_neigh_acv %>% 
   group_by(neighborhood, RACE) %>% 
   summarize(n_white_acvs = n()) %>% 
-  filter(RACE == 'White') %>% 
   ungroup() %>% 
+  filter(RACE == 'White') %>% 
   select(-RACE)
 
 white_acv_screen_neighborhood <- d_neigh_acv %>% 
   group_by(neighborhood, RACE, SCREENING_DECISION) %>% 
   tally() %>% 
+  ungroup() %>% 
   filter(RACE == 'White', 
          SCREENING_DECISION == 'SCREENED IN') %>% 
   mutate(n_white_acvs_screened_in = n) %>% 
-  ungroup() %>% 
   select(neighborhood, n_white_acvs_screened_in) %>% 
   left_join(white_acv_neighborhood, by = 'neighborhood')
 
@@ -198,17 +200,17 @@ white_acv_screen_neighborhood <- d_neigh_acv %>%
 black_acv_neighborhood <- d_neigh_acv %>% 
   group_by(neighborhood, RACE) %>% 
   summarize(n_black_acvs = n()) %>% 
-  filter(RACE == 'Black/African American') %>% 
   ungroup() %>% 
+  filter(RACE == 'Black/African American') %>% 
   select(-RACE)
 
 black_acv_screen_neighborhood <- d_neigh_acv %>% 
   group_by(neighborhood, RACE, SCREENING_DECISION) %>% 
-  tally() %>% 
+  tally() %>%
+  ungroup() %>% 
   filter(RACE == 'Black/African American', 
          SCREENING_DECISION == 'SCREENED IN') %>% 
   mutate(n_black_acvs_screened_in = n) %>% 
-  ungroup() %>% 
   select(neighborhood, n_black_acvs_screened_in) %>% 
   left_join(black_acv_neighborhood, by = 'neighborhood')
 
@@ -310,7 +312,8 @@ date_agg <- 'week'
 
 acv_screen_shifts <- tribble(
   ~MEASURE, ~CENTERLINE_START, ~CENTERLINE_END) %>%
-  mutate(CENTERLINE_START=ymd(CENTERLINE_START),
+  mutate(MEASURE = as.character(MEASURE), 
+         CENTERLINE_START=ymd(CENTERLINE_START),
          CENTERLINE_END=ymd(CENTERLINE_END),
          IN_CALC=TRUE)
 
@@ -320,8 +323,10 @@ acv_screen_data <- d_acv %>%
   summarise(NUM = sum(SCREENING_DECISION == 'SCREENED IN',na.rm = TRUE),
             DENOM = n(),
             .groups = 'drop') %>%
+  ungroup() %>% 
   mutate(RATE = NUM/DENOM*1.0,
          MEASURE = 'SCREENED_IN')
+
 acv_screen_data<-acv_screen_data[-54,]#remove na row at end of group
 
 acv_screen_centers <- p_chart_centerlines(data = acv_screen_data,
@@ -347,7 +352,9 @@ acv_screened_in
 
 race_sreen_shifts <- tribble(
   ~RACE, ~MEASURE, ~CENTERLINE_START, ~CENTERLINE_END) %>%
-  mutate(CENTERLINE_START = ymd(CENTERLINE_START),
+  mutate(RACE = as.character(RACE), 
+         MEASURE = as.character(MEASURE),
+         CENTERLINE_START = ymd(CENTERLINE_START),
          CENTERLINE_END = ymd(CENTERLINE_END),
          IN_CALC = TRUE)
 
@@ -357,8 +364,10 @@ race_screen_data <- d_acv %>%
   summarise(NUM = sum(SCREENING_DECISION == 'SCREENED IN',na.rm = TRUE),
             DENOM = n(),
             .groups = 'drop') %>%
+  ungroup() %>% 
   mutate(RATE = NUM/DENOM*1.0,
          MEASURE = 'SCREENED_IN')
+
 race_screen_data<-race_screen_data[-c(54,108),]#remove na rows at end of each group's period
 
 race_centers <- p_chart_centerlines(data = race_screen_data,
