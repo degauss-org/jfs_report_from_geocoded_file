@@ -9,7 +9,7 @@ build:
 	docker build -t $(IMAGE) .
 
 test:
-	docker run --rm -v "${PWD}/test":/tmp $(IMAGE) simulated_jfs_data.csv
+	docker run --rm -v "${PWD}/test":/tmp $(IMAGE) simulated_jfs_data_geocoded.csv
 	cp test/race_report.html docs/race_report.html
 	cp test/mandated_reporter_report.html docs/mandated_reporter_report.html
 
