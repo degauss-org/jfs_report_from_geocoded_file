@@ -57,6 +57,9 @@ control_chart_plot<-function(data,x_axis,y_axis,lag_points=NULL) {
           legend.justification = 'left',
           plot.title.position = 'plot',
           plot.caption=element_text(hjust=0),
-          axis.title = element_blank()) +
+          axis.title = element_blank(),
+          axis.text = element_text(size=12, color="black"),
+          legend.text = element_text(size = 12, color="black"),
+          panel.spacing.x = unit(2, "lines")) +
     scale_y_continuous(labels=percent_format())
 }
