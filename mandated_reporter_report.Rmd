@@ -294,7 +294,7 @@ tm_basemap("CartoDB.Positron") +
 
 **add description/interpretation of charts from Stuart & team**
 
-```{r}
+```{r fig.width=10}
 source("p_general_join.R", local = knitr::knit_global())
 date_agg <- 'week'
 
@@ -333,7 +333,7 @@ cc_screened_in <- control_chart_plot(screen_centers,
 cc_screened_in
 ```
 
-```{r}
+```{r fig.width=10}
 d_intake <- rename(d_intake, MANDATED_REPORTER_STATUS = at_least_one_mandated_reporter) %>% 
   mutate(MANDATED_REPORTER_STATUS = ifelse(MANDATED_REPORTER_STATUS == 'yes', 'Mandated Reporter', 'Non-Mandated Reporter'))
 
