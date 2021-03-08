@@ -20,7 +20,8 @@ RUN R --quiet -e "renv::restore()"
 
 COPY ham_neighborhoods_dep_index_shp.rds .
 COPY tract_to_neighborhood.rds .
-COPY generate_report.Rmd .
+COPY mandated_reporter_report.Rmd .
+COPY race_report.rmd .
 COPY entrypoint.R .
 
 WORKDIR /tmp
