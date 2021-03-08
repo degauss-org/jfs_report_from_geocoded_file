@@ -8,7 +8,7 @@ p <- add_argument(p,'file_name',help='name of geocoded csv file')
 args <- parse_args(p)
 
 # args <- list()
-# args$file_name <- "sample_addresses_geocoded.csv"
+# args$file_name <- "simulated_jfs_data_geocoded.csv"
 
 # INTAKE_ID
 # SCREENING_DECISION = SCREENED OUT or SCREENED IN
@@ -24,8 +24,6 @@ d <- read_csv(args$file_name,
                                ADDRESS_START = col_date(),
                                MANDATED_REPORTER = col_character(),
                                REPORTER_PERSON_ID = col_character(),
-                               PROVIDER_ID = col_character(),
-                               PROVIDER_NAME = col_character(),
                                address_type = col_character(),
                                address = col_character(),
                                bad_address = col_logical(),
@@ -45,9 +43,13 @@ d <- read_csv(args$file_name,
                                dep_index = col_double()
                                ))
 
-rmarkdown::render(input = '/app/generate_report.Rmd',
+rmarkdown::render(input = '/app/race_report.rmd',
                   params = list(d = d),
                   envir = new.env(),
-                  output_file = fs::path("/tmp", paste0(gsub('.csv', '', args$file_name, fixed=TRUE), '_report.html')))
+                  output_file = fs::path("/tmp", paste0(gsub('.csv', '', args$file_name, fixed=TRUE), '_race_report.html')))
 
+rmarkdown::render(input = '/app/mandated_reporter_report.Rmd',
+                  params = list(d = d),
+                  envir = new.env(),
+                  output_file = fs::path("/tmp", paste0(gsub('.csv', '', args$file_name, fixed=TRUE), '_mandated_reporter_report.html')))
 

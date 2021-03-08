@@ -18,13 +18,13 @@ library(tmap)
 tmap_mode('view')
 ```
 
-```{r, eval = F}
+```{r, eval = T}
 d <- params$d
 tract_to_neighborhood <- readRDS('/app/tract_to_neighborhood.rds')
 neighborhood_shp <- readRDS('/app/ham_neighborhoods_dep_index_shp.rds')
 ```
 
-```{r, eval = T}
+```{r, eval = F}
 d <- read_csv('test/simulated_jfs_data_geocoded.csv',
               col_types = cols(INTAKE_ID = col_character(),
                                SCREENING_DECISION = col_character(),
@@ -77,7 +77,6 @@ for (i in 1:nrow(d)) {
 
 ```{r}
 d_missing_alleg_add <- d %>% 
-  group_by(INTAKE_ID) %>% 
   filter(address_type == 'ALLEGATION_ADDRESS', 
          is.na(address)) %>% 
   select(INTAKE_ID:address_type)
@@ -132,7 +131,8 @@ d_intake <- d_intake %>%
 mr_summary <- d_intake %>% 
   filter(!is.na(lat)) %>% 
   group_by(at_least_one_mandated_reporter, SCREENING_DECISION) %>% 
-  tally() %>% 
+  tally() %>%
+  ungroup() %>% 
   mutate(pct = round(n/sum(n)*100,1)) %>% 
   select(`At Least One Mandated Reporter` = at_least_one_mandated_reporter, 
          Decision = SCREENING_DECISION, n, pct)
@@ -159,6 +159,7 @@ intakes_neighborhood <- d_neigh_intake %>%
 intake_screen_neighborhood <- d_neigh_intake %>% 
   group_by(neighborhood, SCREENING_DECISION) %>% 
   tally() %>% 
+  ungroup() %>% 
   filter(SCREENING_DECISION == 'SCREENED IN') %>% 
   mutate(n_intakes_screened_in = n) %>% 
   select(-n, -SCREENING_DECISION) %>% 
@@ -168,17 +169,17 @@ intake_screen_neighborhood <- d_neigh_intake %>%
 mr_intakes_neighborhood <- d_neigh_intake %>% 
   group_by(neighborhood, at_least_one_mandated_reporter) %>% 
   summarize(n_mandated_reporter_intakes = n()) %>% 
-  filter(at_least_one_mandated_reporter == 'yes') %>% 
   ungroup() %>% 
+  filter(at_least_one_mandated_reporter == 'yes') %>% 
   select(-at_least_one_mandated_reporter)
 
 mr_intake_screen_neighborhood <- d_neigh_intake %>% 
   group_by(neighborhood, at_least_one_mandated_reporter, SCREENING_DECISION) %>% 
   tally() %>% 
+  ungroup() %>% 
   filter(at_least_one_mandated_reporter == 'yes', 
          SCREENING_DECISION == 'SCREENED IN') %>% 
   mutate(n_mandated_reporter_intakes_screened_in = n) %>% 
-  ungroup() %>% 
   select(neighborhood, n_mandated_reporter_intakes_screened_in) %>% 
   left_join(mr_intakes_neighborhood, by = 'neighborhood')
 
@@ -187,17 +188,17 @@ mr_intake_screen_neighborhood <- d_neigh_intake %>%
 nmr_intakes_neighborhood <- d_neigh_intake %>% 
   group_by(neighborhood, at_least_one_mandated_reporter) %>% 
   summarize(n_nonmandated_reporter_intakes = n()) %>% 
-  filter(at_least_one_mandated_reporter == 'no') %>% 
   ungroup() %>% 
+  filter(at_least_one_mandated_reporter == 'no') %>% 
   select(-at_least_one_mandated_reporter)
 
 nmr_intake_screen_neighborhood <- d_neigh_intake %>% 
   group_by(neighborhood, at_least_one_mandated_reporter, SCREENING_DECISION) %>% 
   tally() %>% 
+  ungroup() %>% 
   filter(at_least_one_mandated_reporter == 'no', 
          SCREENING_DECISION == 'SCREENED IN') %>% 
   mutate(n_nonmandated_reporter_intakes_screened_in = n) %>% 
-  ungroup() %>% 
   select(neighborhood, n_nonmandated_reporter_intakes_screened_in) %>% 
   left_join(nmr_intakes_neighborhood, by = 'neighborhood')
 
@@ -293,13 +294,14 @@ tm_basemap("CartoDB.Positron") +
 
 **add description/interpretation of charts from Stuart & team**
 
-```{r}
+```{r fig.width=10}
 source("p_general_join.R", local = knitr::knit_global())
 date_agg <- 'week'
 
 screen_shifts <- tribble(
   ~MEASURE, ~CENTERLINE_START, ~CENTERLINE_END) %>%
-  mutate(CENTERLINE_START=ymd(CENTERLINE_START),
+  mutate(MEASURE = as.character(MEASURE),
+         CENTERLINE_START=ymd(CENTERLINE_START),
          CENTERLINE_END=ymd(CENTERLINE_END),
          IN_CALC=TRUE)
 
@@ -309,6 +311,7 @@ screen_data <- d_intake %>%
   summarise(NUM = sum(SCREENING_DECISION == 'SCREENED IN',na.rm = TRUE),
             DENOM = n(),
             .groups = 'drop') %>%
+  ungroup() %>% 
   mutate(RATE = NUM/DENOM*1.0,
          MEASURE = 'SCREENED_IN')
 
@@ -326,16 +329,19 @@ cc_screened_in <- control_chart_plot(screen_centers,
                                      x_axis = REPORT_WEEK, 
                                      y_axis = RATE) +
   ggtitle('Screen In Rate')
+
 cc_screened_in
 ```
 
-```{r}
+```{r fig.width=10}
 d_intake <- rename(d_intake, MANDATED_REPORTER_STATUS = at_least_one_mandated_reporter) %>% 
   mutate(MANDATED_REPORTER_STATUS = ifelse(MANDATED_REPORTER_STATUS == 'yes', 'Mandated Reporter', 'Non-Mandated Reporter'))
 
 mr_sreen_shifts <- tribble(
   ~MANDATED_REPORTER_STATUS, ~MEASURE, ~CENTERLINE_START, ~CENTERLINE_END) %>%
-  mutate(CENTERLINE_START = ymd(CENTERLINE_START),
+  mutate(MANDATED_REPORTER_STATUS = as.character(MANDATED_REPORTER_STATUS), 
+         MEASURE = as.character(MEASURE),
+         CENTERLINE_START = ymd(CENTERLINE_START),
          CENTERLINE_END = ymd(CENTERLINE_END),
          IN_CALC = TRUE)
 
