@@ -223,7 +223,7 @@ d_neighborhood <- neighborhood_shp %>%
                  n_white_acvs_screened_in,
                  n_black_acvs, 
                  n_black_acvs_screened_in), 
-            ~ifelse(.x < 10, NA, .x)) %>%  # suppress if n < 10 for privacy reasons
+            ~ifelse(.x < 5, NA, .x)) %>%  # suppress if n < 5 for privacy reasons
   mutate(n_acvs_per_1000 = n_acvs/pop_under_18*1000,
          acvs_fractional_screen_in = n_acvs_screened_in/n_acvs,
          n_acvs_white_per_1000 = n_white_acvs/pop_under_18*1000,

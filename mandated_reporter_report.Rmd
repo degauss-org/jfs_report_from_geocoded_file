@@ -212,7 +212,7 @@ d_neighborhood <- neighborhood_shp %>%
                  n_mandated_reporter_intakes_screened_in,
                  n_nonmandated_reporter_intakes, 
                  n_nonmandated_reporter_intakes_screened_in), 
-            ~ifelse(.x < 10, NA, .x)) %>%  # suppress if n < 10 for privacy reasons
+            ~ifelse(.x < 5, NA, .x)) %>%  # suppress if n < 5 for privacy reasons
   mutate(n_intakes_per_1000hh = n_intakes/num_hh*1000,
          intake_fractional_screen_in = n_intakes_screened_in/n_intakes,
          n_intakes_by_mandated_reporter_per_1000hh = n_mandated_reporter_intakes/num_hh*1000,
