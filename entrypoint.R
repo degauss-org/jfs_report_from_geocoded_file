@@ -41,8 +41,8 @@ d <- read_csv(args$file_name,
                                fraction_poverty = col_double(),
                                fraction_vacant_housing = col_double(),
                                dep_index = col_double()
-                               )) %>%
-  dplyr::mutate(DECISION_DATE = dht::check_dates(DECISION_DATE))
+                               ))
+d <- dplyr::mutate(d, DECISION_DATE = dht::check_dates(DECISION_DATE))
 
 rmarkdown::render(input = '/app/race_report.rmd',
                   params = list(d = d),

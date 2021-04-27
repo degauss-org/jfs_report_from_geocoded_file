@@ -5,3 +5,5 @@
 .DS_Store
 old_test/
 *geocoding_cache/
+test/test_dates.csv
+test/R*
