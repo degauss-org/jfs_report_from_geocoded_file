@@ -33,7 +33,7 @@ d <- read_csv('test/simulated_jfs_data_geocoded.csv',
                                RACE = col_character(),
                                ADDRESS_START = col_date(),
                                MANDATED_REPORTER = col_character(),
-                               REPORTER_PERSON_ID = col_character(),
+                               # REPORTER_PERSON_ID = col_character(),
                                PROVIDER_ID = col_character(),
                                PROVIDER_NAME = col_character(),
                                address_type = col_character(),
@@ -103,7 +103,7 @@ d <- d %>%
 ```{r}
 ### Geocoding Summary
 d_intake <- filter(d, !duplicated(INTAKE_ID)) %>% 
-  select(-PERSON_ID, -RACE, -ADDRESS_START, -REPORTER_PERSON_ID,
+  select(-PERSON_ID, -RACE, -ADDRESS_START,
          -address_type)
 
 intake_geocode_summary <- d_intake %>% 
