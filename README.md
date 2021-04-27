@@ -10,7 +10,7 @@
 If `sample_addresses_geocoded.csv` is a file in the current working directory with coordinate columns named `lat` and `lon`, then
 
 ```sh
-docker run --rm -v $PWD:/tmp degauss/jfs_report_from_geocoded_file:2.0 sample_addresses_geocoded.csv
+docker run --rm -v $PWD:/tmp degauss/jfs_report_from_geocoded_file:2.0.1 sample_addresses_geocoded.csv
 ```
 
 will produce `sample_addresses_geocoded_mandated_reporter_report.html` and `sample_addresses_geocoded_race_report.html`.
