@@ -18,12 +18,12 @@ suppressPackageStartupMessages(library(readr))
 d <- read_csv(args$file_name,
               col_types = cols(INTAKE_ID = col_character(),
                                SCREENING_DECISION = col_character(),
-                               DECISION_DATE = col_date(),
+                               DECISION_DATE = col_character(),
                                PERSON_ID = col_character(),
                                RACE = col_character(),
                                ADDRESS_START = col_date(),
                                MANDATED_REPORTER = col_character(),
-                               REPORTER_PERSON_ID = col_character(),
+                              #  REPORTER_PERSON_ID = col_character(),
                                address_type = col_character(),
                                address = col_character(),
                                bad_address = col_logical(),
@@ -42,6 +42,7 @@ d <- read_csv(args$file_name,
                                fraction_vacant_housing = col_double(),
                                dep_index = col_double()
                                ))
+d <- dplyr::mutate(d, DECISION_DATE = dht::check_dates(DECISION_DATE))
 
 rmarkdown::render(input = '/app/race_report.rmd',
                   params = list(d = d),
